@@ -1,34 +1,34 @@
 [package]
 name = "pleiades"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 cyw43 = { version = "0.1.0", features = ["defmt", "firmware-logs"] }
 cyw43-pio = { version = "0.1.0", features = ["defmt", "overclock"] }
 embassy-net = { version = "0.4.0", features = [
-    "defmt",
-    "tcp",
-    "dhcpv4",
-    "medium-ethernet",
+  "defmt",
+  "tcp",
+  "dhcpv4",
+  "medium-ethernet",
 ] }
 embassy-sync = { version = "0.5.0", features = [] }
 embassy-executor = { version = "0.5.0", features = [
-    "nightly",
-    "arch-cortex-m",
-    "executor-thread",
-    "executor-interrupt",
-    "defmt",
-    "integrated-timers",
+  "nightly",
+  "arch-cortex-m",
+  "executor-thread",
+  "executor-interrupt",
+  "defmt",
+  "integrated-timers",
 ] }
 embassy-time = { version = "0.3.0", features = [
-    "defmt",
-    "defmt-timestamp-uptime",
+  "defmt",
+  "defmt-timestamp-uptime",
 ] }
 embassy-rp = { version = "0.1.0", features = [
-    "defmt",
-    "unstable-pac",
-    "time-driver",
+  "defmt",
+  "unstable-pac",
+  "time-driver",
 ] }
 embedded-io = { version = "0.6.1", features = [] }
 embedded-hal-async = "1.0.0"
@@ -42,9 +42,9 @@ panic-reset = { version = "0.1.1", optional = true }
 cortex-m = { version = "0.7.6", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.0"
 futures = { version = "0.3.17", default-features = false, features = [
-    "async-await",
-    "cfg-target-has-atomic",
-    "unstable",
+  "async-await",
+  "cfg-target-has-atomic",
+  "unstable",
 ] }
 pio-proc = "0.2"
 pio = "0.2.1"
@@ -90,3 +90,10 @@ overflow-checks = false
 default = ["panic-probe"]
 panic-reset = ["dep:panic-reset"]
 panic-probe = ["dep:panic-probe"]
+
+[[bin]]
+name = "pleiades"
+path = "src/main.rs"
+test = false
+doctest = false
+bench = false

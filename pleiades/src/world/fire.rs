@@ -11,8 +11,8 @@ use embassy_time::{Duration, Ticker};
 use heapless::Vec;
 use pleiades_macro_derive::Flush;
 use rand::Rng;
-use smart_leds::hsv::Hsv;
 use smart_leds::RGB8;
+use smart_leds::hsv::Hsv;
 
 const HEIGHT_COOLDOWN: u8 = 1;
 const HEIGHT_MIN: usize = 3;

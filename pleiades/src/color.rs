@@ -1,9 +1,9 @@
 use crate::perlin::rand_float;
-use core::cmp::max;
 use core::cmp::Ordering;
+use core::cmp::max;
 use heapless::Vec;
-use smart_leds::hsv::{hsv2rgb, Hsv};
 use smart_leds::RGB8;
+use smart_leds::hsv::{Hsv, hsv2rgb};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
@@ -177,8 +177,7 @@ impl<const COLORS: usize> ColorGradient<COLORS> {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, defmt::Format)]
 pub enum BinSearchError {
     InvalidSearch,
 }

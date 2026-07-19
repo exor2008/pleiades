@@ -146,7 +146,7 @@ impl<const L: usize, const C: usize, const N: usize> Pattern<L, C, N> {
     }
 
     fn index(x: usize, y: usize) -> usize {
-        match x % 2 == 0 {
+        match x.is_multiple_of(2) {
             true => x * L + y,
             false => x * L + (L - y) - 1,
         }

@@ -43,7 +43,7 @@ async fn main(spawner: Spawner) {
     let sda = p.PIN_20;
     let scl = p.PIN_21;
 
-    // Init I2C and Apds9960 gesture sensor 
+    // Init I2C and Apds9960 gesture sensor
     let i2c = i2c::I2c::new_async(p.I2C0, scl, sda, Irqs, Config::default());
     let apds = Apds9960::new(i2c);
 
@@ -100,10 +100,10 @@ async fn sensor_task(mut apds: Apds9960<'static, I2C0, Async>) -> ! {
         //     defmt::info!("Dist: {}", d);
         // }
         apds.gesture().await;
-        if let Some(command) = apds.command() {
-            if let Err(_err) = CHANNEL.try_send(command) {
-                defmt::error!("Command channel buffer is full");
-            }
+        if let Some(command) = apds.command()
+            && let Err(_err) = CHANNEL.try_send(command)
+        {
+            defmt::error!("Command channel buffer is full");
         }
         ticker.next().await;
     }

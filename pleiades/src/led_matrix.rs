@@ -14,6 +14,7 @@ pub trait WritableMatrix {
     fn read(&self, x: usize, y: usize) -> RGB8;
     async fn flush(&mut self);
 }
+
 pub struct LedMatrix<'ws, Ws: PioWrite<N>, const L: usize, const N: usize> {
     data: [RGB8; N],
     ws: &'ws mut Ws,
@@ -28,7 +29,7 @@ impl<'ws, Ws: PioWrite<N>, const L: usize, const N: usize> LedMatrix<'ws, Ws, L,
     }
 
     fn index(&self, x: usize, y: usize) -> usize {
-        match x % 2 == 0 {
+        match x.is_multiple_of(2) {
             true => x * L + y,
             false => x * L + (L - y) - 1,
         }

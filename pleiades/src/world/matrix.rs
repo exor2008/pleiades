@@ -33,14 +33,8 @@ pub struct Matrix<
     t: usize,
 }
 
-impl<
-        'led,
-        Led: WritableMatrix,
-        const C: usize,
-        const L: usize,
-        const N: usize,
-        const N2: usize,
-    > Matrix<'led, Led, C, L, N, N2>
+impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
+    Matrix<'led, Led, C, L, N, N2>
 {
     pub fn new(led: &'led mut Led) -> Self {
         let ticker = Ticker::every(Duration::from_millis(30));
@@ -65,14 +59,8 @@ impl<
     }
 }
 
-impl<
-        'led,
-        Led: WritableMatrix,
-        const C: usize,
-        const L: usize,
-        const N: usize,
-        const N2: usize,
-    > Tick for Matrix<'led, Led, C, L, N, N2>
+impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
+    Tick for Matrix<'led, Led, C, L, N, N2>
 {
     async fn tick(&mut self) {
         self.led.clear();
@@ -82,11 +70,11 @@ impl<
         self.remove_letters();
 
         self.letters.iter_mut().for_each(|letter| match letter {
-            Letters::Falling(ref mut l) => {
+            Letters::Falling(l) => {
                 let color = self.colormap.get(l.temperature);
                 self.led.write(l.x, l.y, color);
             }
-            Letters::Stationary(ref mut l) => {
+            Letters::Stationary(l) => {
                 let color = self.colormap.get(l.temperature);
                 self.led.write(l.x, l.y, color);
             }
@@ -97,14 +85,8 @@ impl<
     }
 }
 
-impl<
-        'led,
-        Led: WritableMatrix,
-        const C: usize,
-        const L: usize,
-        const N: usize,
-        const N2: usize,
-    > Matrix<'led, Led, C, L, N, N2>
+impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
+    Matrix<'led, Led, C, L, N, N2>
 {
     fn spawn_letters(&mut self) {
         let chance = perlin::rand_float(0.0, 1.0);
@@ -128,7 +110,7 @@ impl<
         let mut tmp_letters: Vec<Letters, N> = Vec::new();
 
         self.letters.iter_mut().for_each(|letter| match letter {
-            Letters::Falling(ref mut l) => {
+            Letters::Falling(l) => {
                 if l.down() {
                     let letter =
                         Letters::new_stationary(l.x, l.y - 1, l.temperature - 0.2, l.cool_rate);
@@ -138,7 +120,7 @@ impl<
                 }
             }
 
-            Letters::Stationary(ref mut l) => {
+            Letters::Stationary(l) => {
                 l.cool();
             }
         });
@@ -170,14 +152,8 @@ impl<
     }
 }
 
-impl<
-        'led,
-        Led: WritableMatrix,
-        const C: usize,
-        const L: usize,
-        const N: usize,
-        const N2: usize,
-    > OnDirection for Matrix<'led, Led, C, L, N, N2>
+impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
+    OnDirection for Matrix<'led, Led, C, L, N, N2>
 {
     fn on_direction(&mut self, direction: Direction) {
         match direction {

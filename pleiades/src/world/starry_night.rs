@@ -106,7 +106,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize>
                 let xx = (x.wrapping_add(rnd)) as f32 / 5.0;
                 let yy = (y.wrapping_add(rnd)) as f32 / 5.0;
 
-                let noise = noise.get2d([xx, yy]) as f32;
+                let noise = noise.get2d([xx, yy]);
                 let noise = noise - 0.45;
                 let noise = if noise <= 0.0 {
                     0.0
@@ -126,7 +126,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> 
     for StarryNight<'led, Led, C, L, N>
 {
     async fn tick(&mut self) {
-        if self.t % self.frames.value() == 0 {
+        if self.t.is_multiple_of(*self.frames.value()) {
             self.buffer_old = self.buffer_new;
             self.buffer_new = self.step();
         }
