@@ -17,13 +17,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install deps for probe-rs
-      run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev libssl-dev
+      run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev libssl-dev tree
     - name: Install elf to uf2 converter
       run: cargo install elf2uf2-rs
     - name: Build
       run: |
         cd pleiades
-        cargo build -Z unstable-options --verbose --features panic-reset --no-default-features --release --target-dir target/
+        cargo build -Z unstable-options --verbose --features panic-reset --no-default-features --release
+    -name : DbgPring
+      run: tree -a
     - name: Create uf2
       run: elf2uf2-rs ./target/pleiades ./pleiades.uf2
     - name: Upload artifact
