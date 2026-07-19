@@ -24,7 +24,7 @@ jobs:
       run: |
         cd pleiades
         cargo build -Z unstable-options --verbose --features panic-reset --no-default-features --release
-    -name : DbgPring
+    - name : DbgPring
       run: tree -a
     - name: Create uf2
       run: elf2uf2-rs ./target/pleiades ./pleiades.uf2
