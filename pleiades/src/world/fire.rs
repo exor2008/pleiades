@@ -1,11 +1,12 @@
 use super::OnDirection;
 use crate::apds9960::Direction;
+use crate::buffer::{Buffer, Point, RGB8Buffer};
 use crate::color::ColorGradient;
-use crate::led_matrix::WritableMatrix;
 use crate::perlin;
+use crate::world::Tick;
 use crate::world::utils::CooldownValue;
-use crate::world::{Flush, Tick};
 use core::cmp::max;
+use core::pin::Pin;
 use embassy_rp::clocks::RoscRng;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
@@ -22,9 +23,8 @@ const COLORS: usize = 4;
 const MAX_SPARKS: usize = 2;
 const SPAWN_COOLDOWN: usize = 60;
 
-#[derive(Flush)]
-pub struct Fire<'led, Led: WritableMatrix, const C: usize, const L: usize> {
-    led: &'led mut Led,
+// #[derive(Flush)]
+pub struct Fire<B: Buffer<RGB8, Point>, const C: usize, const L: usize> {
     noise: perlin::PerlinNoise,
     colormap: ColorGradient<COLORS>,
     height: CooldownValue<HEIGHT_COOLDOWN, HEIGHT_MIN, HEIGHT_MAX>,
@@ -34,17 +34,19 @@ pub struct Fire<'led, Led: WritableMatrix, const C: usize, const L: usize> {
     t: usize,
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize> Fire<'led, Led, C, L> {
-    pub fn new(led: &'led mut Led) -> Self {
+impl<const C: usize, const L: usize, B> Fire<B, C, L>
+where
+    B: Buffer<RGB8, Point>,
+{
+    pub fn new() -> Self {
         let noise = perlin::PerlinNoise::new();
-        let colormap = Fire::<'led, Led, C, L>::get_colormap();
+        let colormap = Fire::<B, C, L>::get_colormap();
         let height = CooldownValue::new(HEIGHT_INIT);
         let ticker = Ticker::every(Duration::from_millis(35));
         let sparks: Vec<Spark, MAX_SPARKS> = Vec::new();
         let spawn_counter = Default::default();
 
         Self {
-            led,
             noise,
             colormap,
             height,
@@ -54,41 +56,14 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize> Fire<'led, Led, 
             t: 0,
         }
     }
-
-    fn antialiasing(&mut self) {
-        let mut buffer = [[RGB8::default(); L]; C];
-
-        for y in 0..L {
-            for x in 0..C {
-                let color = self.led.read(x, y);
-                if color != RGB8::default() {
-                    let alias_color = RGB8::from(color / 2);
-                    match x {
-                        x if x == 0 => buffer[x + 1][y] = alias_color,
-                        x if x == C - 1 => buffer[x - 1][y] = alias_color,
-                        x => {
-                            buffer[x + 1][y] = alias_color;
-                            buffer[x - 1][y] = alias_color;
-                        }
-                    }
-                }
-            }
-        }
-
-        for (y, buffer) in buffer.iter().enumerate().take(L) {
-            for (x, buffer) in buffer.iter().enumerate().take(C) {
-                let color = self.led.read(x, y);
-                if color == RGB8::default() {
-                    self.led.write(x, y, *buffer);
-                }
-            }
-        }
-    }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize> Tick for Fire<'led, Led, C, L> {
-    async fn tick(&mut self) {
-        self.led.clear();
+impl<B, const C: usize, const L: usize> Tick<RGB8, Point, B> for Fire<B, C, L>
+where
+    B: Buffer<RGB8, Point>,
+{
+    async fn tick(&mut self, buffer: &mut B) {
+        buffer.clear();
 
         for x in 0..C {
             // Generate noise for fire shape
@@ -107,22 +82,24 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize> Tick for Fire<'l
 
             // Color every fire pillar pixel
             // and write it to buffer
-            for i in L - height..L {
-                let temp = (L - i - 1) as f32 / (height - 1) as f32;
+            for y in L - height..L {
+                let temp = (L - y - 1) as f32 / (height - 1) as f32;
                 let color = self.colormap.get_noised(temp, -0.2, 0.2);
-                self.led.write(x, i, color);
+                buffer.write(Point { x, y }, color);
             }
         }
-        self.antialiasing();
         self.process_sparks();
-        self.draw_sparks();
+        self.draw_sparks(buffer);
 
         self.t = self.t.wrapping_add(1);
         self.ticker.next().await;
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize> Fire<'led, Led, C, L> {
+impl<B, const C: usize, const L: usize> Fire<B, C, L>
+where
+    B: Buffer<RGB8, Point>,
+{
     fn spawn_spark(&mut self, x: usize, height: usize) {
         self.spawn_counter += 1;
         if height < (C - 1)
@@ -145,13 +122,17 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize> Fire<'led, Led, 
             .retain(|spark| (spark.x >= 0) && (spark.x < C as isize) && (spark.y >= 0));
     }
 
-    fn draw_sparks(&mut self) {
+    fn draw_sparks(&mut self, buffer: &mut B) {
         let mut rng = RoscRng;
         let temp = rng.gen_range(0.8f32..=1.0);
 
         for spark in self.sparks.iter() {
             let color = self.colormap.get_noised(temp, 0.0, 0.2);
-            self.led.write(spark.x as usize, spark.y as usize, color);
+            let p = Point {
+                x: spark.x as usize,
+                y: spark.y as usize,
+            };
+            buffer.write(p, color);
         }
     }
 
@@ -183,8 +164,9 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize> Fire<'led, Led, 
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize> OnDirection
-    for Fire<'led, Led, C, L>
+impl<B, const C: usize, const L: usize> OnDirection for Fire<B, C, L>
+where
+    B: Buffer<RGB8, Point>,
 {
     fn on_direction(&mut self, direction: Direction) {
         match direction {

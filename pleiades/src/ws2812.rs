@@ -2,13 +2,13 @@ use embassy_rp::dma::{AnyChannel, Channel};
 use embassy_rp::pio::{
     Common, Config, FifoJoin, Instance, PioPin, ShiftConfig, ShiftDirection, StateMachine,
 };
-use embassy_rp::{clocks, into_ref, Peripheral, PeripheralRef};
+use embassy_rp::{Peripheral, PeripheralRef, clocks, into_ref};
 use fixed::types::U24F8;
 use fixed_macro::fixed;
 use smart_leds::RGB8;
 
-pub trait PioWrite<const N: usize> {
-    async fn write(&mut self, colors: &[RGB8; N]);
+pub trait LedWrite<Color, const N: usize> {
+    async fn write(&mut self, colors: &[Color; N]);
 }
 
 pub struct Ws2812<'d, P: Instance, const S: usize, const N: usize> {
@@ -87,7 +87,7 @@ impl<'d, P: Instance, const S: usize, const N: usize> Ws2812<'d, P, S, N> {
     }
 }
 
-impl<'d, P: Instance, const S: usize, const N: usize> PioWrite<N> for Ws2812<'d, P, S, N> {
+impl<'d, P: Instance, const S: usize, const N: usize> LedWrite<RGB8, N> for Ws2812<'d, P, S, N> {
     async fn write(&mut self, colors: &[RGB8; N]) {
         // Precompute the word bytes from the colors
         let mut words = [0u32; N];

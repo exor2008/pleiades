@@ -1,7 +1,7 @@
 use super::OnDirection;
 use crate::apds9960::Direction;
+use crate::buffer::Buffer;
 use crate::color::{Color, ColorGradient};
-use crate::led_matrix::WritableMatrix;
 use crate::perlin;
 use crate::world::utils::CooldownValue;
 use crate::world::{Flush, Tick};
@@ -18,7 +18,7 @@ const SPARKS_MAX_CHANCE: usize = 5;
 #[derive(Flush)]
 pub struct Matrix<
     'led,
-    Led: WritableMatrix,
+    Led: Buffer,
     const C: usize,
     const L: usize,
     const N: usize,
@@ -33,7 +33,7 @@ pub struct Matrix<
     t: usize,
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize>
     Matrix<'led, Led, C, L, N, N2>
 {
     pub fn new(led: &'led mut Led) -> Self {
@@ -59,8 +59,8 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, 
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
-    Tick for Matrix<'led, Led, C, L, N, N2>
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize> Tick
+    for Matrix<'led, Led, C, L, N, N2>
 {
     async fn tick(&mut self) {
         self.led.clear();
@@ -85,7 +85,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, 
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize>
     Matrix<'led, Led, C, L, N, N2>
 {
     fn spawn_letters(&mut self) {
@@ -152,8 +152,8 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, 
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize, const N2: usize>
-    OnDirection for Matrix<'led, Led, C, L, N, N2>
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize> OnDirection
+    for Matrix<'led, Led, C, L, N, N2>
 {
     fn on_direction(&mut self, direction: Direction) {
         match direction {

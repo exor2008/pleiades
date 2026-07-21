@@ -1,8 +1,12 @@
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{parse, parse_macro_input, DeriveInput, Ident, ItemEnum, Token};
+use syn::Expr::Let;
+use syn::{
+    parse, parse_macro_input, DeriveInput, Ident, ItemEnum, Token, Type, TypeParam, TypeParamBound,
+    WherePredicate,
+};
 use to_snake_case::ToSnakeCase;
 
 #[proc_macro_derive(Flush)]
@@ -21,8 +25,8 @@ fn impl_pleiades_flush(ast: &DeriveInput) -> TokenStream {
     let gen = quote! {
         impl #impl_generics Flush for #name #ty_generics #where_clause
         {
-            async fn flush(&mut self) {
-                self.led.flush().await;
+            async fn flush(&mut self, led: &mut Led) {
+                led.flush().await;
             }
         }
     };
@@ -50,6 +54,23 @@ pub fn enum_world(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let (impl_generics, ty_generics, where_clause) = &item.generics.split_for_impl();
 
+    let mut buff_type = None;
+    if let Some(where_clause) = where_clause {
+        for predicate in &where_clause.predicates {
+            if let WherePredicate::Type(tp) = &predicate {
+                for bound in &tp.bounds {
+                    if let TypeParamBound::Trait(trt) = bound {
+                        for seg in &trt.path.segments {
+                            if seg.ident == "Buffer" {
+                                buff_type = Some(&tp.bounded_ty);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let mut new_world_funcs = quote! {};
     let mut match_blocks = quote! {};
     let mut on_directions_funcs = quote! {};
@@ -58,8 +79,8 @@ pub fn enum_world(attr: TokenStream, item: TokenStream) -> TokenStream {
         let snake = format_ident!("{}", variant.to_string().to_snake_case());
         let func_name = format_ident!("{}_new", snake);
         let func_code = quote! {
-            pub fn #func_name (led: &'led mut Led ) -> Self {
-                let #snake = #snake::#variant::new(led);
+            pub fn #func_name () -> Self {
+                let #snake = #snake::#variant::new();
                 World::#variant(#snake)
             }
         };
@@ -67,8 +88,8 @@ pub fn enum_world(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         let match_block = quote! {
             Self::#variant(ref mut #snake) => {
-                #snake.tick().await;
-                #snake.flush().await;
+                #snake.tick(buffer).await;
+                // #snake.flush().await;
             }
         };
         match_blocks.extend(match_block);
@@ -86,7 +107,7 @@ pub fn enum_world(attr: TokenStream, item: TokenStream) -> TokenStream {
         {
             #new_world_funcs
 
-            pub async fn tick(world: &mut World<'led, Led, C, L, N, N2>) {
+            pub async fn tick(world: &mut World #ty_generics, buffer: &mut #buff_type) {
                 match world {
                     #match_blocks
                 }

@@ -1,7 +1,7 @@
 use super::OnDirection;
 use crate::apds9960::Direction;
+use crate::buffer::Buffer;
 use crate::color::{Color, ColorGradient};
-use crate::led_matrix::WritableMatrix;
 use crate::perlin;
 use crate::world::utils::CooldownValue;
 use crate::world::{Flush, Tick};
@@ -19,7 +19,7 @@ const POINTS_MAX: usize = 20;
 const TIMES_OF_DAY: usize = 3;
 
 #[derive(Flush)]
-pub struct Voronoi<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> {
+pub struct Voronoi<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> {
     led: &'led mut Led,
     buffer_new: [[RGB8; L]; C],
     buffer_old: [[RGB8; L]; C],
@@ -29,7 +29,7 @@ pub struct Voronoi<'led, Led: WritableMatrix, const C: usize, const L: usize, co
     time: f32,
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize>
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
     Voronoi<'led, Led, C, L, N>
 {
     pub fn new(led: &'led mut Led) -> Self {
@@ -51,7 +51,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize>
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> Tick
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
     for Voronoi<'led, Led, C, L, N>
 {
     async fn tick(&mut self) {
@@ -83,7 +83,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> 
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> OnDirection
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> OnDirection
     for Voronoi<'led, Led, C, L, N>
 {
     fn on_direction(&mut self, direction: Direction) {
@@ -123,11 +123,7 @@ impl<const L: usize, const C: usize> Point<L, C> {
     fn wrap_go(var: isize, shift: isize, border: isize) -> isize {
         let var = var + shift;
         let var = if var < 0 { border - 1 } else { var };
-        if var >= border - 1 {
-            0
-        } else {
-            var
-        }
+        if var >= border - 1 { 0 } else { var }
     }
 
     fn change_dir(&mut self) {

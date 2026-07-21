@@ -3,7 +3,7 @@ use crate::apds9960::Direction;
 use crate::color::{Color, ColorGradient};
 use crate::world::utils::CooldownValue;
 use crate::world::{Flush, Tick};
-use crate::{led_matrix::WritableMatrix, perlin};
+use crate::{buffer::Buffer, perlin};
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
 use pleiades_macro_derive::Flush;
@@ -20,7 +20,7 @@ const STAR_SPAWN_COOLDOWN: usize = 10;
 const Y_COOLDOWN: usize = 1;
 
 #[derive(Flush)]
-pub struct StarryNight<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> {
+pub struct StarryNight<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> {
     led: &'led mut Led,
     stars_colormap: ColorGradient<STARS_COLORS>,
     stars: Vec<Star<C, L>, STARS>,
@@ -33,7 +33,7 @@ pub struct StarryNight<'led, Led: WritableMatrix, const C: usize, const L: usize
     t: usize,
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize>
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
     StarryNight<'led, Led, C, L, N>
 {
     pub fn new(led: &'led mut Led) -> Self {
@@ -122,7 +122,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize>
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> Tick
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
     for StarryNight<'led, Led, C, L, N>
 {
     async fn tick(&mut self) {
@@ -150,7 +150,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> 
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize>
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
     StarryNight<'led, Led, C, L, N>
 {
     fn spawn_stars(&mut self) {
@@ -182,7 +182,7 @@ impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize>
     }
 }
 
-impl<'led, Led: WritableMatrix, const C: usize, const L: usize, const N: usize> OnDirection
+impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> OnDirection
     for StarryNight<'led, Led, C, L, N>
 {
     fn on_direction(&mut self, direction: Direction) {
