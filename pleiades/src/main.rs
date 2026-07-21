@@ -13,11 +13,9 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Ticker};
 use pleiades::apds9960::{Apds9960, Command};
-use pleiades::buffer::{Point, RGB8Buffer};
-use pleiades::world::fire::Fire;
-use pleiades::world::{OnDirection, Tick};
+use pleiades::buffer::RGB8Buffer;
+use pleiades::world::Switch;
 use pleiades::ws2812::{LedWrite, Ws2812};
-use smart_leds::RGB8;
 
 #[cfg(feature = "panic-probe")]
 use panic_probe as _;
@@ -64,25 +62,33 @@ async fn main(spawner: Spawner) {
     // Init 16x16 LED matrix buffer
     let mut buffer: RGB8Buffer<NUM_LEDS_LINE, NUM_LEDS> = RGB8Buffer::new();
 
+    // Switcher to switch between the worlds
+    let mut switch = Switch::new();
+
     // Create a new world
-    let world: &mut dyn Tick<RGB8, Point, RGB8Buffer<NUM_LEDS_LINE, NUM_LEDS>, Ticker = Ticker> =
-        &mut Fire::<NUM_LEDS_COLUMN, NUM_LEDS_LINE>::new();
+    let mut w = Switch::get_world::<NUM_LEDS_COLUMN, NUM_LEDS_LINE>(1);
+    let mut world = w.as_tick();
+
     // > = World::matrix_from(ws2812);
     // > = World::northen_light_from(ws2812);
     // > = World::voronoi_from(ws2812);
 
-    // let mut switch = Switch::new();
-
     loop {
-        // // Handle the command from the gesture sensor
-        // if let Ok(command) = CHANNEL.try_receive() {
-        //     // defmt::info!("Command!: {}", command);
-        //     match command {
-        //         Command::Level(direction) => world.on_direction(direction),
-        //         Command::Swing => world = switch.switch_world(&mut buffer),
-        //         Command::SwitchPower => world = switch.switch_power(&mut buffer),
-        //     }
-        // }
+        // Handle the command from the gesture sensor
+        if let Ok(command) = CHANNEL.try_receive() {
+            // defmt::info!("Command!: {}", command);
+            match command {
+                Command::Level(direction) => world.on_direction(direction),
+                Command::Swing => {
+                    w = switch.switch_world::<NUM_LEDS_COLUMN, NUM_LEDS_LINE>();
+                    world = w.as_tick();
+                }
+                Command::SwitchPower => {
+                    w = switch.switch_power::<NUM_LEDS_COLUMN, NUM_LEDS_LINE>();
+                    world = w.as_tick();
+                }
+            }
+        }
 
         world.tick(&mut buffer);
         ws2812.write(&buffer.data).await;

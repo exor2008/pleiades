@@ -1,16 +1,13 @@
-use super::OnDirection;
 use crate::apds9960::Direction;
-use crate::buffer::{Buffer, Point, RGB8Buffer};
+use crate::buffer::{Buffer, Point};
 use crate::color::ColorGradient;
 use crate::perlin;
 use crate::world::Tick;
 use crate::world::utils::CooldownValue;
 use core::cmp::max;
-use core::pin::Pin;
 use embassy_rp::clocks::RoscRng;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
-use pleiades_macro_derive::Flush;
 use rand::Rng;
 use smart_leds::RGB8;
 use smart_leds::hsv::Hsv;
@@ -23,7 +20,6 @@ const COLORS: usize = 4;
 const MAX_SPARKS: usize = 2;
 const SPAWN_COOLDOWN: usize = 60;
 
-// #[derive(Flush)]
 pub struct Fire<const C: usize, const L: usize> {
     noise: perlin::PerlinNoise,
     colormap: ColorGradient<COLORS>,
@@ -52,6 +48,12 @@ impl<const C: usize, const L: usize> Fire<C, L> {
             spawn_counter,
             t: 0,
         }
+    }
+}
+
+impl<const C: usize, const L: usize> Default for Fire<C, L> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -97,7 +99,23 @@ where
     fn ticker(&mut self) -> &mut Self::Ticker {
         &mut self.ticker
     }
+
+    // impl<const C: usize, const L: usize> OnDirection for Fire<C, L> {
+    fn on_direction(&mut self, direction: Direction) {
+        match direction {
+            Direction::Up => {
+                self.colormap.change_value(20);
+                self.height.down();
+            }
+            Direction::Down => {
+                self.colormap.change_value(-20);
+                self.height.up();
+            }
+        }
+    }
 }
+
+// }
 
 impl<const C: usize, const L: usize> Fire<C, L> {
     fn spawn_spark(&mut self, x: usize, height: usize) {
@@ -161,21 +179,6 @@ impl<const C: usize, const L: usize> Fire<C, L> {
             },
         ];
         ColorGradient::from_hsv(pos, hsv)
-    }
-}
-
-impl<const C: usize, const L: usize> OnDirection for Fire<C, L> {
-    fn on_direction(&mut self, direction: Direction) {
-        match direction {
-            Direction::Up => {
-                self.colormap.change_value(20);
-                self.height.down();
-            }
-            Direction::Down => {
-                self.colormap.change_value(-20);
-                self.height.up();
-            }
-        }
     }
 }
 
