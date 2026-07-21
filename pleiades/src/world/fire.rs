@@ -24,7 +24,7 @@ const MAX_SPARKS: usize = 2;
 const SPAWN_COOLDOWN: usize = 60;
 
 // #[derive(Flush)]
-pub struct Fire<B: Buffer<RGB8, Point>, const C: usize, const L: usize> {
+pub struct Fire<const C: usize, const L: usize> {
     noise: perlin::PerlinNoise,
     colormap: ColorGradient<COLORS>,
     height: CooldownValue<HEIGHT_COOLDOWN, HEIGHT_MIN, HEIGHT_MAX>,
@@ -34,13 +34,10 @@ pub struct Fire<B: Buffer<RGB8, Point>, const C: usize, const L: usize> {
     t: usize,
 }
 
-impl<const C: usize, const L: usize, B> Fire<B, C, L>
-where
-    B: Buffer<RGB8, Point>,
-{
+impl<const C: usize, const L: usize> Fire<C, L> {
     pub fn new() -> Self {
         let noise = perlin::PerlinNoise::new();
-        let colormap = Fire::<B, C, L>::get_colormap();
+        let colormap = Fire::<C, L>::get_colormap();
         let height = CooldownValue::new(HEIGHT_INIT);
         let ticker = Ticker::every(Duration::from_millis(35));
         let sparks: Vec<Spark, MAX_SPARKS> = Vec::new();
@@ -58,11 +55,13 @@ where
     }
 }
 
-impl<B, const C: usize, const L: usize> Tick<RGB8, Point, B> for Fire<B, C, L>
+impl<B, const C: usize, const L: usize> Tick<RGB8, Point, B> for Fire<C, L>
 where
     B: Buffer<RGB8, Point>,
 {
-    async fn tick(&mut self, buffer: &mut B) {
+    type Ticker = Ticker;
+
+    fn tick(&mut self, buffer: &mut B) {
         buffer.clear();
 
         for x in 0..C {
@@ -92,14 +91,15 @@ where
         self.draw_sparks(buffer);
 
         self.t = self.t.wrapping_add(1);
-        self.ticker.next().await;
+        // self.ticker.next().await;
+    }
+
+    fn ticker(&mut self) -> &mut Self::Ticker {
+        &mut self.ticker
     }
 }
 
-impl<B, const C: usize, const L: usize> Fire<B, C, L>
-where
-    B: Buffer<RGB8, Point>,
-{
+impl<const C: usize, const L: usize> Fire<C, L> {
     fn spawn_spark(&mut self, x: usize, height: usize) {
         self.spawn_counter += 1;
         if height < (C - 1)
@@ -122,7 +122,7 @@ where
             .retain(|spark| (spark.x >= 0) && (spark.x < C as isize) && (spark.y >= 0));
     }
 
-    fn draw_sparks(&mut self, buffer: &mut B) {
+    fn draw_sparks<B: Buffer<RGB8, Point>>(&mut self, buffer: &mut B) {
         let mut rng = RoscRng;
         let temp = rng.gen_range(0.8f32..=1.0);
 
@@ -164,10 +164,7 @@ where
     }
 }
 
-impl<B, const C: usize, const L: usize> OnDirection for Fire<B, C, L>
-where
-    B: Buffer<RGB8, Point>,
-{
+impl<const C: usize, const L: usize> OnDirection for Fire<C, L> {
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => {

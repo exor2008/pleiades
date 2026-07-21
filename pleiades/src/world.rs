@@ -22,7 +22,10 @@ pub trait Tick<Color, Coord, B>
 where
     B: Buffer<Color, Coord>,
 {
-    async fn tick(&mut self, buffer: &mut B);
+    type Ticker;
+
+    fn tick(&mut self, buffer: &mut B);
+    fn ticker(&mut self) -> &mut Self::Ticker;
 }
 
 // pub trait Flush<Color, Led, const N: usize>
@@ -36,21 +39,21 @@ pub trait OnDirection {
     fn on_direction(&mut self, direction: Direction);
 }
 
-#[allow(clippy::large_enum_variant)]
+// #[allow(clippy::large_enum_variant)]
 // #[enum_world(Empty, Fire, NorthenLight, Matrix, Voronoi, StarryNight, Solid)]
-#[enum_world(Fire)]
-pub enum World<B, const C: usize, const L: usize, const N: usize, const N2: usize>
-where
-    B: Buffer<RGB8, Point>,
-{
-    // Empty(empty::Empty<'led, Led>),
-    Fire(fire::Fire<B, C, L>),
-    // NorthenLight(northen_light::NorthenLight<'led, Led, C, L, N>),
-    // Matrix(matrix::Matrix<'led, Led, C, L, N, N2>),
-    // Voronoi(voronoi::Voronoi<'led, Led, C, L, N>),
-    // StarryNight(starry_night::StarryNight<'led, Led, C, L, N>),
-    // Solid(solid::Solid<'led, Led, C, L, N>),
-}
+// #[enum_world(Fire)]
+// pub enum World<B, const C: usize, const L: usize, const N: usize, const N2: usize>
+// where
+//     B: Buffer<RGB8, Point>,
+// {
+//     // Empty(empty::Empty<'led, Led>),
+//     Fire(fire::Fire<B, C, L>),
+//     // NorthenLight(northen_light::NorthenLight<'led, Led, C, L, N>),
+//     // Matrix(matrix::Matrix<'led, Led, C, L, N, N2>),
+//     // Voronoi(voronoi::Voronoi<'led, Led, C, L, N>),
+//     // StarryNight(starry_night::StarryNight<'led, Led, C, L, N>),
+//     // Solid(solid::Solid<'led, Led, C, L, N>),
+// }
 
 // pub struct Switch {
 //     counter: usize,
