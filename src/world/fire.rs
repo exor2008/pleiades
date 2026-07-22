@@ -115,8 +115,6 @@ where
     }
 }
 
-// }
-
 impl<const C: usize, const L: usize> Fire<C, L> {
     fn spawn_spark(&mut self, x: usize, height: usize) {
         self.spawn_counter += 1;

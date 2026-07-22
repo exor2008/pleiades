@@ -1,37 +1,32 @@
-use super::OnDirection;
 use crate::apds9960::Direction;
-use crate::buffer::Buffer;
+use crate::buffer::{Buffer, Point};
 use crate::color::Color;
 use crate::color::ColorGradient;
 use crate::perlin;
+use crate::world::Tick;
 use crate::world::utils::CooldownValue;
-use crate::world::{Flush, Tick};
 use embassy_time::{Duration, Ticker};
-use pleiades_macro_derive::Flush;
 use smart_leds::RGB8;
 
 const HUE_COOLDOWN: u8 = 0;
 const HUE_MIN: usize = 0;
 const HUE_MAX: usize = 75;
 
-#[derive(Flush)]
-pub struct Solid<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> {
-    led: &'led mut Led,
+pub struct Solid<const C: usize, const L: usize, const N: usize> {
     colormap: ColorGradient<8>,
     hue: CooldownValue<HUE_COOLDOWN, HUE_MIN, HUE_MAX>,
     ticker: Ticker,
     t: usize,
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Solid<'led, Led, C, L, N> {
-    pub fn new(led: &'led mut Led) -> Self {
-        let colormap = Solid::<'led, Led, C, L, N>::get_colormap();
+impl<const C: usize, const L: usize, const N: usize> Solid<C, L, N> {
+    pub fn new() -> Self {
+        let colormap = Solid::<C, L, N>::get_colormap();
         let init_hue = perlin::rand_uint(HUE_MIN as u32, HUE_MAX as u32) as usize;
         let hue = CooldownValue::new(init_hue);
         let ticker = Ticker::every(Duration::from_millis(50));
 
         Self {
-            led,
             colormap,
             hue,
             ticker,
@@ -54,24 +49,32 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Solid<'l
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
-    for Solid<'led, Led, C, L, N>
-{
-    async fn tick(&mut self) {
-        self.led.clear();
-
-        let value = (*self.hue.value()) as f32 / HUE_MAX as f32;
-        let color = self.colormap.get(value);
-        self.led.bg(color);
-
-        self.t = self.t.wrapping_add(1);
-        self.ticker.next().await;
+impl<const C: usize, const L: usize, const N: usize> Default for Solid<C, L, N> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> OnDirection
-    for Solid<'led, Led, C, L, N>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B> for Solid<C, L, N>
+where
+    B: Buffer<RGB8, Point>,
 {
+    type Ticker = Ticker;
+
+    fn tick(&mut self, buffer: &mut B) {
+        buffer.clear();
+
+        let value = (*self.hue.value()) as f32 / HUE_MAX as f32;
+        let color = self.colormap.get(value);
+        buffer.bg(color);
+
+        self.t = self.t.wrapping_add(1);
+    }
+
+    fn ticker(&mut self) -> &mut Self::Ticker {
+        &mut self.ticker
+    }
+
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => {

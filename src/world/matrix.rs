@@ -1,30 +1,19 @@
-use super::OnDirection;
 use crate::apds9960::Direction;
-use crate::buffer::Buffer;
+use crate::buffer::{Buffer, Point};
 use crate::color::{Color, ColorGradient};
 use crate::perlin;
+use crate::world::Tick;
 use crate::world::utils::CooldownValue;
-use crate::world::{Flush, Tick};
 use core::marker::PhantomData;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
-use pleiades_macro_derive::Flush;
 use smart_leds::RGB8;
 
 const SPARKS_COOLDOWN: u8 = 3;
 const SPARKS_MIN_CHANCE: usize = 2;
 const SPARKS_MAX_CHANCE: usize = 5;
 
-#[derive(Flush)]
-pub struct Matrix<
-    'led,
-    Led: Buffer,
-    const C: usize,
-    const L: usize,
-    const N: usize,
-    const N2: usize,
-> {
-    led: &'led mut Led,
+pub struct Matrix<const C: usize, const L: usize, const N: usize, const N2: usize> {
     colormap: ColorGradient<C>,
     letters: Vec<Letters, N2>,
     ticker: Ticker,
@@ -33,10 +22,8 @@ pub struct Matrix<
     t: usize,
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize>
-    Matrix<'led, Led, C, L, N, N2>
-{
-    pub fn new(led: &'led mut Led) -> Self {
+impl<const C: usize, const L: usize, const N: usize, const N2: usize> Matrix<C, L, N, N2> {
+    pub fn new() -> Self {
         let ticker = Ticker::every(Duration::from_millis(30));
         let mut colormap = ColorGradient::new();
         let spawn_chance = CooldownValue::new(2);
@@ -48,7 +35,6 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2
         colormap.add_color(Color::new(1.01, RGB8::new(50, 150, 50)));
 
         Self {
-            led,
             colormap,
             letters,
             ticker,
@@ -59,11 +45,23 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize> Tick
-    for Matrix<'led, Led, C, L, N, N2>
+impl<const C: usize, const L: usize, const N: usize, const N2: usize> Default
+    for Matrix<C, L, N, N2>
 {
-    async fn tick(&mut self) {
-        self.led.clear();
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<B, const C: usize, const L: usize, const N: usize, const N2: usize> Tick<RGB8, Point, B>
+    for Matrix<C, L, N, N2>
+where
+    B: Buffer<RGB8, Point>,
+{
+    type Ticker = Ticker;
+
+    fn tick(&mut self, buffer: &mut B) {
+        buffer.clear();
 
         self.spawn_letters();
         self.process_letters();
@@ -72,22 +70,30 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2
         self.letters.iter_mut().for_each(|letter| match letter {
             Letters::Falling(l) => {
                 let color = self.colormap.get(l.temperature);
-                self.led.write(l.x, l.y, color);
+                buffer.write(Point { x: l.x, y: l.y }, color);
             }
             Letters::Stationary(l) => {
                 let color = self.colormap.get(l.temperature);
-                self.led.write(l.x, l.y, color);
+                buffer.write(Point { x: l.x, y: l.y }, color);
             }
         });
 
         self.t = self.t.wrapping_add(1);
-        self.ticker.next().await;
+    }
+
+    fn ticker(&mut self) -> &mut Self::Ticker {
+        &mut self.ticker
+    }
+
+    fn on_direction(&mut self, direction: Direction) {
+        match direction {
+            Direction::Up => self.spawn_chance.up(),
+            Direction::Down => self.spawn_chance.down(),
+        }
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize>
-    Matrix<'led, Led, C, L, N, N2>
-{
+impl<const C: usize, const L: usize, const N: usize, const N2: usize> Matrix<C, L, N, N2> {
     fn spawn_letters(&mut self) {
         let chance = perlin::rand_float(0.0, 1.0);
         let prob = 1.0 - *self.spawn_chance.value() as f32 / 10.0;
@@ -149,17 +155,6 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2
             perlin::shuffle(&mut self.rnd_col);
         }
         self.rnd_col.remove(self.rnd_col.len() - 1)
-    }
-}
-
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize, const N2: usize> OnDirection
-    for Matrix<'led, Led, C, L, N, N2>
-{
-    fn on_direction(&mut self, direction: Direction) {
-        match direction {
-            Direction::Up => self.spawn_chance.up(),
-            Direction::Down => self.spawn_chance.down(),
-        }
     }
 }
 

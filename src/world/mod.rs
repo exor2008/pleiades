@@ -6,14 +6,14 @@ use crate::{
 use embassy_time::Ticker;
 use smart_leds::RGB8;
 
-// pub mod empty;
+pub mod empty;
 pub mod fire;
-// pub mod matrix;
-// pub mod northen_light;
-// pub mod solid;
-// pub mod starry_night;
+pub mod matrix;
+pub mod northen_light;
+pub mod solid;
+pub mod starry_night;
 pub mod utils;
-// pub mod voronoi;
+pub mod voronoi;
 
 const WORLDS: usize = 6;
 

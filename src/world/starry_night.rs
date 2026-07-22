@@ -1,12 +1,11 @@
-use super::OnDirection;
 use crate::apds9960::Direction;
+use crate::buffer::{Buffer, Point};
 use crate::color::{Color, ColorGradient};
+use crate::perlin;
+use crate::world::Tick;
 use crate::world::utils::CooldownValue;
-use crate::world::{Flush, Tick};
-use crate::{buffer::Buffer, perlin};
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
-use pleiades_macro_derive::Flush;
 use smart_leds::RGB8;
 
 const STARS_COLORS: usize = 7;
@@ -19,9 +18,7 @@ const FRAMES_COOLDOWN: u8 = 1;
 const STAR_SPAWN_COOLDOWN: usize = 10;
 const Y_COOLDOWN: usize = 1;
 
-#[derive(Flush)]
-pub struct StarryNight<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> {
-    led: &'led mut Led,
+pub struct StarryNight<const C: usize, const L: usize, const N: usize> {
     stars_colormap: ColorGradient<STARS_COLORS>,
     stars: Vec<Star<C, L>, STARS>,
     ticker: Ticker,
@@ -33,10 +30,8 @@ pub struct StarryNight<'led, Led: Buffer, const C: usize, const L: usize, const 
     t: usize,
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
-    StarryNight<'led, Led, C, L, N>
-{
-    pub fn new(led: &'led mut Led) -> Self {
+impl<const C: usize, const L: usize, const N: usize> StarryNight<C, L, N> {
+    pub fn new() -> Self {
         let ticker = Ticker::every(Duration::from_millis(50));
         let stars_colormap = Self::get_stars_colormap();
         let buffer_space = Self::get_bg();
@@ -53,7 +48,6 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
         }
 
         Self {
-            led,
             stars_colormap,
             ticker,
             stars,
@@ -122,10 +116,20 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
-    for StarryNight<'led, Led, C, L, N>
+impl<const C: usize, const L: usize, const N: usize> Default for StarryNight<C, L, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B>
+    for StarryNight<C, L, N>
+where
+    B: Buffer<RGB8, Point>,
 {
-    async fn tick(&mut self) {
+    type Ticker = Ticker;
+
+    fn tick(&mut self, buffer: &mut B) {
         if self.t.is_multiple_of(*self.frames.value()) {
             self.buffer_old = self.buffer_new;
             self.buffer_new = self.step();
@@ -141,18 +145,26 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
                 let mut grad: ColorGradient<2> = ColorGradient::new();
                 grad.add_color(c1);
                 grad.add_color(c2);
-                self.led.write(x, y, grad.get(coef));
+                buffer.write(Point { x, y }, grad.get(coef));
             }
         }
 
         self.t = self.t.wrapping_add(1);
-        self.ticker.next().await;
+    }
+
+    fn on_direction(&mut self, direction: Direction) {
+        match direction {
+            Direction::Up => self.frames.down(),
+            Direction::Down => self.frames.up(),
+        }
+    }
+
+    fn ticker(&mut self) -> &mut Self::Ticker {
+        &mut self.ticker
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
-    StarryNight<'led, Led, C, L, N>
-{
+impl<const C: usize, const L: usize, const N: usize> StarryNight<C, L, N> {
     fn spawn_stars(&mut self) {
         if !self.stars.is_full() && self.since_star_spawn >= STAR_SPAWN_COOLDOWN {
             self.stars.push(Star::new()).unwrap();
@@ -179,17 +191,6 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
                     self.stars_colormap.get_noised(star.temperature, -0.1, 0.1);
             }
         });
-    }
-}
-
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> OnDirection
-    for StarryNight<'led, Led, C, L, N>
-{
-    fn on_direction(&mut self, direction: Direction) {
-        match direction {
-            Direction::Up => self.frames.down(),
-            Direction::Down => self.frames.up(),
-        }
     }
 }
 

@@ -1,15 +1,13 @@
-use super::OnDirection;
 use crate::apds9960::Direction;
-use crate::buffer::Buffer;
+use crate::buffer::{Buffer, Point as Bpoint};
 use crate::color::{Color, ColorGradient};
 use crate::perlin;
+use crate::world::Tick;
 use crate::world::utils::CooldownValue;
-use crate::world::{Flush, Tick};
 use core::f32::consts::PI;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
 use micromath::F32Ext;
-use pleiades_macro_derive::Flush;
 use smart_leds::RGB8;
 
 const POINTS_COOLDOWN: u8 = 0;
@@ -18,9 +16,7 @@ const POINTS_MIN: usize = 2;
 const POINTS_MAX: usize = 20;
 const TIMES_OF_DAY: usize = 3;
 
-#[derive(Flush)]
-pub struct Voronoi<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> {
-    led: &'led mut Led,
+pub struct Voronoi<const C: usize, const L: usize, const N: usize> {
     buffer_new: [[RGB8; L]; C],
     buffer_old: [[RGB8; L]; C],
     model: Model<L, C>,
@@ -29,10 +25,8 @@ pub struct Voronoi<'led, Led: Buffer, const C: usize, const L: usize, const N: u
     time: f32,
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
-    Voronoi<'led, Led, C, L, N>
-{
-    pub fn new(led: &'led mut Led) -> Self {
+impl<const C: usize, const L: usize, const N: usize> Voronoi<C, L, N> {
+    pub fn new() -> Self {
         let ticker = Ticker::every(Duration::from_millis(20));
         let time = PI / 2.0;
         let mut model: Model<L, C> = Model::new();
@@ -40,7 +34,6 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
         let buffer_old = buffer_new;
 
         Self {
-            led,
             model,
             ticker,
             buffer_new,
@@ -51,11 +44,20 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
-    for Voronoi<'led, Led, C, L, N>
+impl<const C: usize, const L: usize, const N: usize> Default for Voronoi<C, L, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Bpoint, B> for Voronoi<C, L, N>
+where
+    B: Buffer<RGB8, Bpoint>,
 {
-    async fn tick(&mut self) {
-        self.led.clear();
+    type Ticker = Ticker;
+
+    fn tick(&mut self, buffer: &mut B) {
+        buffer.clear();
 
         self.time += 1e-3;
         if self.t == 0 {
@@ -73,19 +75,14 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
                 let mut grad: ColorGradient<2> = ColorGradient::new();
                 grad.add_color(c1);
                 grad.add_color(c2);
-                self.led.write(x, y, grad.get(r));
+                buffer.write(Bpoint { x, y }, grad.get(r));
             }
         }
 
         self.t += 1;
         self.t = if self.t > 10 { 0 } else { self.t };
-        self.ticker.next().await;
     }
-}
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> OnDirection
-    for Voronoi<'led, Led, C, L, N>
-{
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => {
@@ -95,6 +92,10 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> OnDirect
                 self.model.desired_points_count.down();
             }
         }
+    }
+
+    fn ticker(&mut self) -> &mut Self::Ticker {
+        &mut self.ticker
     }
 }
 

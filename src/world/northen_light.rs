@@ -1,15 +1,13 @@
-use super::OnDirection;
 use crate::apds9960::Direction;
-use crate::buffer::Buffer;
+use crate::buffer::{Buffer, Point};
 use crate::color::{Color, ColorGradient};
 use crate::perlin;
+use crate::world::Tick;
 use crate::world::utils::CooldownValue;
-use crate::world::{Flush, Tick};
 use core::iter::Sum;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
 use perlin::rand_float;
-use pleiades_macro_derive::Flush;
 use smart_leds::RGB8;
 
 const PATTERNS_COOLDOWNL: u8 = 1;
@@ -17,9 +15,7 @@ const PATTERNS_MAX: usize = 9;
 const PATTERNS_MIN: usize = 2;
 const PATTERNS_INIT: usize = 6;
 
-#[derive(Flush)]
-pub struct NorthenLight<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> {
-    led: &'led mut Led,
+pub struct NorthenLight<const C: usize, const L: usize, const N: usize> {
     colormap: ColorGradient<C>,
     ticker: Ticker,
     patterns: Vec<Pattern<L, C, N>, PATTERNS_MAX>,
@@ -28,17 +24,14 @@ pub struct NorthenLight<'led, Led: Buffer, const C: usize, const L: usize, const
     last_spawn: isize,
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
-    NorthenLight<'led, Led, C, L, N>
-{
-    pub fn new(led: &'led mut Led) -> Self {
+impl<const C: usize, const L: usize, const N: usize> NorthenLight<C, L, N> {
+    pub fn new() -> Self {
         let ticker = Ticker::every(Duration::from_millis(20));
-        let colormap = NorthenLight::<'led, Led, C, L, N>::get_colormap();
+        let colormap = NorthenLight::<C, L, N>::get_colormap();
         let patterns: Vec<Pattern<L, C, N>, PATTERNS_MAX> = Vec::new();
         let curr_n_patterns = CooldownValue::new(PATTERNS_INIT);
 
         Self {
-            led,
             colormap,
             ticker,
             patterns,
@@ -49,11 +42,21 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
-    for NorthenLight<'led, Led, C, L, N>
+impl<const C: usize, const L: usize, const N: usize> Default for NorthenLight<C, L, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B>
+    for NorthenLight<C, L, N>
+where
+    B: Buffer<RGB8, Point>,
 {
-    async fn tick(&mut self) {
-        self.led.clear();
+    type Ticker = Ticker;
+
+    fn tick(&mut self, buffer: &mut B) {
+        buffer.clear();
 
         self.spawn_patterns();
         self.process_patterns();
@@ -62,19 +65,31 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> Tick
         for index in 0..N {
             let temperature = sum_pattern.data()[index];
             let color = self.colormap.get(temperature);
-            self.led.write_straight(index, color);
+            buffer.write_straight(index, color);
         }
 
         self.remove_obsolete_patterns();
 
         self.t = self.t.wrapping_add(1);
-        self.ticker.next().await;
+    }
+
+    fn ticker(&mut self) -> &mut Self::Ticker {
+        &mut self.ticker
+    }
+
+    fn on_direction(&mut self, direction: Direction) {
+        match direction {
+            Direction::Up => {
+                self.curr_n_patterns.up();
+            }
+            Direction::Down => {
+                self.curr_n_patterns.down();
+            }
+        }
     }
 }
 
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
-    NorthenLight<'led, Led, C, L, N>
-{
+impl<const C: usize, const L: usize, const N: usize> NorthenLight<C, L, N> {
     fn spawn_patterns(&mut self) {
         let time_till_last_spawn = self.t as isize - self.last_spawn;
         let is_limit = self.patterns.len() >= *self.curr_n_patterns.value();
@@ -109,21 +124,6 @@ impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize>
         colormap.add_color(Color::new(1.01, RGB8::new(70, 30, 100)));
 
         colormap
-    }
-}
-
-impl<'led, Led: Buffer, const C: usize, const L: usize, const N: usize> OnDirection
-    for NorthenLight<'led, Led, C, L, N>
-{
-    fn on_direction(&mut self, direction: Direction) {
-        match direction {
-            Direction::Up => {
-                self.curr_n_patterns.up();
-            }
-            Direction::Down => {
-                self.curr_n_patterns.down();
-            }
-        }
     }
 }
 
