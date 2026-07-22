@@ -1,35 +1,35 @@
 #![no_std]
 #![no_main]
-#![feature(type_alias_impl_trait)]
 
 use defmt::*;
 use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_rp::bind_interrupts;
+use embassy_rp::dma::InterruptHandler as DmaInterruptHandler;
 use embassy_rp::i2c::{self, Async, Config, InterruptHandler as I2CInterruptHandler};
-use embassy_rp::peripherals::{I2C0, PIO0};
+use embassy_rp::peripherals::{DMA_CH0, I2C0, PIO0};
 use embassy_rp::pio::{InterruptHandler as PioInterruptHandler, Pio};
+use embassy_rp::pio_programs::ws2812::{PioWs2812, PioWs2812Program};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Ticker};
 use pleiades::apds9960::{Apds9960, Command};
 use pleiades::buffer::RGB8Buffer;
 use pleiades::world::Switch;
-use pleiades::ws2812::{LedWrite, Ws2812};
 
 #[cfg(feature = "panic-probe")]
 use panic_probe as _;
-// #[cfg(feature = "panic-reset")]
-// use panic_reset as _;
+#[cfg(feature = "panic-reset")]
+use panic_reset as _;
 
 const NUM_LEDS_LINE: usize = 16;
 const NUM_LEDS_COLUMN: usize = 16;
 const NUM_LEDS: usize = NUM_LEDS_LINE * NUM_LEDS_COLUMN;
-const STATE_MACHINE: usize = 0;
 
 bind_interrupts!(struct Irqs {
     I2C0_IRQ => I2CInterruptHandler<I2C0>;
     PIO0_IRQ_0 => PioInterruptHandler<PIO0>;
+    DMA_IRQ_0 => DmaInterruptHandler<DMA_CH0>;
 });
 
 static CHANNEL: Channel<ThreadModeRawMutex, Command, 1> = Channel::new();
@@ -48,16 +48,15 @@ async fn main(spawner: Spawner) {
     let apds = Apds9960::new(i2c);
 
     // Start sensor_task asynchronously
-    unwrap!(spawner.spawn(sensor_task(apds)));
+    spawner.spawn(sensor_task(apds).unwrap());
 
     // Init PIO to support WS2812 protocol
     let Pio {
         mut common, sm0, ..
     } = Pio::new(p.PIO0, Irqs);
 
-    // Init WS2812 LED controller
-    let mut ws2812: Ws2812<PIO0, STATE_MACHINE, NUM_LEDS> =
-        Ws2812::new(&mut common, sm0, p.DMA_CH0, p.PIN_22);
+    let program = PioWs2812Program::new(&mut common);
+    let mut ws2812 = PioWs2812::new(&mut common, sm0, p.DMA_CH0, Irqs, p.PIN_22, &program);
 
     // Init 16x16 LED matrix buffer
     let mut buffer: RGB8Buffer<NUM_LEDS_LINE, NUM_LEDS> = RGB8Buffer::new();

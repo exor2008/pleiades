@@ -9,4 +9,3 @@ pub mod buffer;
 pub mod color;
 pub mod perlin;
 pub mod world;
-pub mod ws2812;

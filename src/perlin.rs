@@ -3,8 +3,7 @@
 use embassy_rp::clocks::RoscRng;
 use heapless::Vec;
 use micromath::F32Ext;
-use rand::RngCore;
-use rand::{seq::SliceRandom, Rng};
+use rand::{Rng, seq::SliceRandom};
 
 /// Perlin Noise generator that outputs 1/2/3D Perlin noise
 #[derive(Clone)]
@@ -31,7 +30,7 @@ impl PerlinNoise {
         }
 
         for i in 0..256 {
-            let j = rng.gen_range(0..256) & 0xFF;
+            let j = rng.random_range(0..256) & 0xFF;
 
             perm.swap(j, i);
         }
@@ -207,19 +206,11 @@ fn grad3d(hash: usize, x: f32, y: f32, z: f32) -> f32 {
 fn grad2d(hash: usize, x: f32, y: f32) -> f32 {
     let v = if hash & 1 == 0 { x } else { y };
 
-    if (hash & 1) == 0 {
-        -v
-    } else {
-        v
-    }
+    if (hash & 1) == 0 { -v } else { v }
 }
 
 fn grad1d(hash: usize, x: f32) -> f32 {
-    if (hash & 1) == 0 {
-        -x
-    } else {
-        x
-    }
+    if (hash & 1) == 0 { -x } else { x }
 }
 
 // Linear Interpolate
@@ -232,17 +223,17 @@ fn lerp(t: f32, a: f32, b: f32) -> f32 {
 
 pub fn rand_float(min: f32, max: f32) -> f32 {
     let mut rng = RoscRng;
-    rng.gen_range(min..max)
+    rng.random_range(min..max)
 }
 
 pub fn rand_uint(min: u32, max: u32) -> u32 {
     let mut rng = RoscRng;
-    rng.gen_range(min..max)
+    rng.random_range(min..max)
 }
 
 pub fn rand_int(min: i32, max: i32) -> i32 {
     let mut rng = RoscRng;
-    rng.gen_range(min..max)
+    rng.random_range(min..max)
 }
 
 pub fn fair_rand_float() -> f32 {
@@ -252,7 +243,7 @@ pub fn fair_rand_float() -> f32 {
 
 pub fn spawn_chance(numerator: u32, denominator: u32) -> bool {
     let mut rng = RoscRng;
-    rng.gen_ratio(numerator, denominator)
+    rng.random_ratio(numerator, denominator)
 }
 
 pub fn shuffle<T, const N: usize>(vec: &mut Vec<T, N>) {

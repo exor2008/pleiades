@@ -140,7 +140,7 @@ impl<const C: usize, const L: usize> Fire<C, L> {
 
     fn draw_sparks<B: Buffer<RGB8, Point>>(&mut self, buffer: &mut B) {
         let mut rng = RoscRng;
-        let temp = rng.gen_range(0.8f32..=1.0);
+        let temp = rng.random_range(0.8f32..=1.0);
 
         for spark in self.sparks.iter() {
             let color = self.colormap.get_noised(temp, 0.0, 0.2);
