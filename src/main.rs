@@ -19,10 +19,10 @@ use ledlab::world::{Switch, World};
 use pleiades::buffer::RGB8Buffer;
 use pleiades::world::WorldEnum;
 
-// #[cfg(feature = "panic-probe")]
+#[cfg(feature = "panic-probe")]
 use panic_probe as _;
-// #[cfg(feature = "panic-reset")]
-// use panic_reset as _;
+#[cfg(feature = "panic-reset")]
+use panic_reset as _;
 
 const WORLDS: usize = 6;
 const NUM_LEDS_LINE: usize = 16;
