@@ -1,12 +1,13 @@
-use crate::apds9960::Direction;
-use crate::buffer::{Buffer, Point};
-use crate::color::{Color, ColorGradient};
-use crate::perlin;
+use crate::buffer::Point;
 use crate::world::Tick;
 use crate::world::utils::CooldownValue;
 use core::iter::Sum;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
+use ledlab::buffer::Buffer;
+use ledlab::color::{Color, ColorGradient};
+use ledlab::perlin;
+use ledlab::utils::Direction;
 use perlin::rand_float;
 use smart_leds::RGB8;
 
@@ -15,7 +16,7 @@ const PATTERNS_MAX: usize = 9;
 const PATTERNS_MIN: usize = 2;
 const PATTERNS_INIT: usize = 6;
 
-pub struct NorthenLight<const C: usize, const L: usize, const N: usize> {
+pub struct NorthernLight<const C: usize, const L: usize, const N: usize> {
     colormap: ColorGradient<C>,
     ticker: Ticker,
     patterns: Vec<Pattern<L, C, N>, PATTERNS_MAX>,
@@ -24,10 +25,10 @@ pub struct NorthenLight<const C: usize, const L: usize, const N: usize> {
     last_spawn: isize,
 }
 
-impl<const C: usize, const L: usize, const N: usize> NorthenLight<C, L, N> {
+impl<const C: usize, const L: usize, const N: usize> NorthernLight<C, L, N> {
     pub fn new() -> Self {
         let ticker = Ticker::every(Duration::from_millis(20));
-        let colormap = NorthenLight::<C, L, N>::get_colormap();
+        let colormap = NorthernLight::<C, L, N>::get_colormap();
         let patterns: Vec<Pattern<L, C, N>, PATTERNS_MAX> = Vec::new();
         let curr_n_patterns = CooldownValue::new(PATTERNS_INIT);
 
@@ -42,14 +43,14 @@ impl<const C: usize, const L: usize, const N: usize> NorthenLight<C, L, N> {
     }
 }
 
-impl<const C: usize, const L: usize, const N: usize> Default for NorthenLight<C, L, N> {
+impl<const C: usize, const L: usize, const N: usize> Default for NorthernLight<C, L, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B>
-    for NorthenLight<C, L, N>
+    for NorthernLight<C, L, N>
 where
     B: Buffer<RGB8, Point>,
 {
@@ -89,7 +90,7 @@ where
     }
 }
 
-impl<const C: usize, const L: usize, const N: usize> NorthenLight<C, L, N> {
+impl<const C: usize, const L: usize, const N: usize> NorthernLight<C, L, N> {
     fn spawn_patterns(&mut self) {
         let time_till_last_spawn = self.t as isize - self.last_spawn;
         let is_limit = self.patterns.len() >= *self.curr_n_patterns.value();
@@ -158,7 +159,7 @@ impl<const L: usize, const C: usize, const N: usize> Pattern<L, C, N> {
 
         for x in 0..C {
             for y in 0..L {
-                // Generate noise for northen light
+                // Generate noise for northern light
                 let xx = (x.wrapping_add(t)) as f32 / 5.0;
                 let yy = (y.wrapping_add(t)) as f32 / 5.0;
                 // let zz = t as f32;

@@ -1,11 +1,12 @@
-use crate::apds9960::Direction;
-use crate::buffer::{Buffer, Point};
-use crate::color::Color;
-use crate::color::ColorGradient;
-use crate::perlin;
+use crate::buffer::Point;
 use crate::world::Tick;
 use crate::world::utils::CooldownValue;
 use embassy_time::{Duration, Ticker};
+use ledlab::buffer::Buffer;
+use ledlab::color::Color;
+use ledlab::color::ColorGradient;
+use ledlab::perlin;
+use ledlab::utils::Direction;
 use smart_leds::RGB8;
 
 const HUE_COOLDOWN: u8 = 0;

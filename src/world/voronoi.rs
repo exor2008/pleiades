@@ -1,12 +1,13 @@
-use crate::apds9960::Direction;
-use crate::buffer::{Buffer, Point as Bpoint};
-use crate::color::{Color, ColorGradient};
-use crate::perlin;
+use crate::buffer::Point as Bpoint;
 use crate::world::Tick;
 use crate::world::utils::CooldownValue;
 use core::f32::consts::PI;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
+use ledlab::buffer::Buffer;
+use ledlab::color::{Color, ColorGradient};
+use ledlab::perlin;
+use ledlab::utils::Direction;
 use micromath::F32Ext;
 use smart_leds::RGB8;
 

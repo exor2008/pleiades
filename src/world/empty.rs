@@ -1,7 +1,7 @@
-use crate::apds9960::Direction;
-use crate::buffer::{Buffer, Point};
+use crate::buffer::Point;
 use crate::world::Tick;
 use embassy_time::{Duration, Ticker};
+use ledlab::{buffer::Buffer, utils::Direction};
 use smart_leds::RGB8;
 
 pub struct Empty {

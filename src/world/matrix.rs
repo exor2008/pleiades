@@ -1,33 +1,36 @@
-use crate::apds9960::Direction;
-use crate::buffer::{Buffer, Point};
-use crate::color::{Color, ColorGradient};
-use crate::perlin;
+use crate::buffer::Point;
 use crate::world::Tick;
 use crate::world::utils::CooldownValue;
 use core::marker::PhantomData;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
+use ledlab::{
+    buffer::Buffer,
+    color::{Color, ColorGradient},
+    perlin,
+    utils::Direction,
+};
 use smart_leds::RGB8;
 
 const SPARKS_COOLDOWN: u8 = 3;
 const SPARKS_MIN_CHANCE: usize = 2;
 const SPARKS_MAX_CHANCE: usize = 5;
 
-pub struct Matrix<const C: usize, const L: usize, const N: usize, const N2: usize> {
+pub struct Matrix<const C: usize, const L: usize, const N: usize> {
     colormap: ColorGradient<C>,
-    letters: Vec<Letters, N2>,
+    letters: Vec<Letters, N>,
     ticker: Ticker,
     rnd_col: Vec<usize, C>,
     spawn_chance: CooldownValue<SPARKS_COOLDOWN, SPARKS_MIN_CHANCE, SPARKS_MAX_CHANCE>,
     t: usize,
 }
 
-impl<const C: usize, const L: usize, const N: usize, const N2: usize> Matrix<C, L, N, N2> {
+impl<const C: usize, const L: usize, const N: usize> Matrix<C, L, N> {
     pub fn new() -> Self {
         let ticker = Ticker::every(Duration::from_millis(30));
         let mut colormap = ColorGradient::new();
         let spawn_chance = CooldownValue::new(2);
-        let letters: Vec<Letters, N2> = Vec::new();
+        let letters: Vec<Letters, N> = Vec::new();
         let rnd_col: Vec<usize, C> = Vec::new();
 
         colormap.add_color(Color::new(0.0, RGB8::new(0, 0, 0)));
@@ -45,16 +48,13 @@ impl<const C: usize, const L: usize, const N: usize, const N2: usize> Matrix<C, 
     }
 }
 
-impl<const C: usize, const L: usize, const N: usize, const N2: usize> Default
-    for Matrix<C, L, N, N2>
-{
+impl<const C: usize, const L: usize, const N: usize> Default for Matrix<C, L, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<B, const C: usize, const L: usize, const N: usize, const N2: usize> Tick<RGB8, Point, B>
-    for Matrix<C, L, N, N2>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B> for Matrix<C, L, N>
 where
     B: Buffer<RGB8, Point>,
 {
@@ -93,7 +93,7 @@ where
     }
 }
 
-impl<const C: usize, const L: usize, const N: usize, const N2: usize> Matrix<C, L, N, N2> {
+impl<const C: usize, const L: usize, const N: usize> Matrix<C, L, N> {
     fn spawn_letters(&mut self) {
         let chance = perlin::rand_float(0.0, 1.0);
         let prob = 1.0 - *self.spawn_chance.value() as f32 / 10.0;
@@ -131,7 +131,7 @@ impl<const C: usize, const L: usize, const N: usize, const N2: usize> Matrix<C, 
             }
         });
 
-        if N2 - self.letters.len() >= tmp_letters.len() {
+        if { N * 2 } - self.letters.len() >= tmp_letters.len() {
             self.letters.extend(tmp_letters);
         } else {
             defmt::error!(

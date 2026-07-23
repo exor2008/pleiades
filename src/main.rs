@@ -13,15 +13,18 @@ use embassy_rp::pio_programs::ws2812::{PioWs2812, PioWs2812Program};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Ticker};
-use pleiades::apds9960::{Apds9960, Command};
+use ledlab::apds9960::Apds9960;
+use ledlab::utils::Command;
+use ledlab::world::{Switch, World};
 use pleiades::buffer::RGB8Buffer;
-use pleiades::world::Switch;
+use pleiades::world::WorldEnum;
 
-#[cfg(feature = "panic-probe")]
+// #[cfg(feature = "panic-probe")]
 use panic_probe as _;
-#[cfg(feature = "panic-reset")]
-use panic_reset as _;
+// #[cfg(feature = "panic-reset")]
+// use panic_reset as _;
 
+const WORLDS: usize = 6;
 const NUM_LEDS_LINE: usize = 16;
 const NUM_LEDS_COLUMN: usize = 16;
 const NUM_LEDS: usize = NUM_LEDS_LINE * NUM_LEDS_COLUMN;
@@ -62,15 +65,11 @@ async fn main(spawner: Spawner) {
     let mut buffer: RGB8Buffer<NUM_LEDS_LINE, NUM_LEDS> = RGB8Buffer::new();
 
     // Switcher to switch between the worlds
-    let mut switch = Switch::new();
+    let mut switch: Switch<WORLDS> = Switch::new();
 
     // Create a new world
-    let mut w = Switch::get_world::<NUM_LEDS_COLUMN, NUM_LEDS_LINE>(1);
+    let mut w = WorldEnum::get_world(1);
     let mut world = w.as_tick();
-
-    // > = World::matrix_from(ws2812);
-    // > = World::northen_light_from(ws2812);
-    // > = World::voronoi_from(ws2812);
 
     loop {
         // Handle the command from the gesture sensor
@@ -79,11 +78,13 @@ async fn main(spawner: Spawner) {
             match command {
                 Command::Level(direction) => world.on_direction(direction),
                 Command::Swing => {
-                    w = switch.switch_world::<NUM_LEDS_COLUMN, NUM_LEDS_LINE>();
+                    w = switch
+                        .switch_world::<WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>>();
                     world = w.as_tick();
                 }
                 Command::SwitchPower => {
-                    w = switch.switch_power::<NUM_LEDS_COLUMN, NUM_LEDS_LINE>();
+                    w = switch
+                        .switch_power::<WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>>();
                     world = w.as_tick();
                 }
             }
