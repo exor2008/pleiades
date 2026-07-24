@@ -1,8 +1,11 @@
 use crate::buffer::Point;
 use crate::world::Tick;
 use embassy_time::{Duration, Ticker};
-use ledlab::{buffer::Buffer, utils::Direction};
-use smart_leds::RGB8;
+use ledlab::{
+    buffer::Buffer,
+    utils::Direction,
+    world::{GetTicker, OnDirection},
+};
 
 pub struct Empty {
     ticker: Ticker,
@@ -22,19 +25,21 @@ impl Default for Empty {
     }
 }
 
-impl<B> Tick<RGB8, Point, B> for Empty
+impl<B, const N: usize> Tick<Point, B, N> for Empty
 where
-    B: Buffer<RGB8, Point>,
+    B: Buffer<Point, N>,
 {
-    type Ticker = Ticker;
-
     fn tick(&mut self, buffer: &mut B) {
         buffer.clear();
     }
+}
 
-    fn ticker(&mut self) -> &mut Self::Ticker {
+impl GetTicker for Empty {
+    fn get_ticker(&mut self) -> &mut Ticker {
         &mut self.ticker
     }
+}
 
+impl OnDirection for Empty {
     fn on_direction(&mut self, _direction: Direction) {}
 }

@@ -7,6 +7,7 @@ use ledlab::buffer::Buffer;
 use ledlab::color::{Color, ColorGradient};
 use ledlab::perlin;
 use ledlab::utils::Direction;
+use ledlab::world::{GetTicker, OnDirection};
 use smart_leds::RGB8;
 
 const STARS_COLORS: usize = 7;
@@ -123,13 +124,10 @@ impl<const C: usize, const L: usize, const N: usize> Default for StarryNight<C, 
     }
 }
 
-impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B>
-    for StarryNight<C, L, N>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<Point, B, N> for StarryNight<C, L, N>
 where
-    B: Buffer<RGB8, Point>,
+    B: Buffer<Point, N>,
 {
-    type Ticker = Ticker;
-
     fn tick(&mut self, buffer: &mut B) {
         if self.t.is_multiple_of(*self.frames.value()) {
             self.buffer_old = self.buffer_new;
@@ -152,16 +150,20 @@ where
 
         self.t = self.t.wrapping_add(1);
     }
+}
 
+impl<const C: usize, const L: usize, const N: usize> GetTicker for StarryNight<C, L, N> {
+    fn get_ticker(&mut self) -> &mut Ticker {
+        &mut self.ticker
+    }
+}
+
+impl<const C: usize, const L: usize, const N: usize> OnDirection for StarryNight<C, L, N> {
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => self.frames.down(),
             Direction::Down => self.frames.up(),
         }
-    }
-
-    fn ticker(&mut self) -> &mut Self::Ticker {
-        &mut self.ticker
     }
 }
 

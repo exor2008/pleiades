@@ -7,6 +7,8 @@ use ledlab::color::Color;
 use ledlab::color::ColorGradient;
 use ledlab::perlin;
 use ledlab::utils::Direction;
+use ledlab::world::GetTicker;
+use ledlab::world::OnDirection;
 use smart_leds::RGB8;
 
 const HUE_COOLDOWN: u8 = 0;
@@ -56,12 +58,10 @@ impl<const C: usize, const L: usize, const N: usize> Default for Solid<C, L, N> 
     }
 }
 
-impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B> for Solid<C, L, N>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<Point, B, N> for Solid<C, L, N>
 where
-    B: Buffer<RGB8, Point>,
+    B: Buffer<Point, N>,
 {
-    type Ticker = Ticker;
-
     fn tick(&mut self, buffer: &mut B) {
         buffer.clear();
 
@@ -71,11 +71,15 @@ where
 
         self.t = self.t.wrapping_add(1);
     }
+}
 
-    fn ticker(&mut self) -> &mut Self::Ticker {
+impl<const C: usize, const L: usize, const N: usize> GetTicker for Solid<C, L, N> {
+    fn get_ticker(&mut self) -> &mut Ticker {
         &mut self.ticker
     }
+}
 
+impl<const C: usize, const L: usize, const N: usize> OnDirection for Solid<C, L, N> {
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => {

@@ -8,9 +8,8 @@ use crate::{
 use embassy_time::Ticker;
 use ledlab::{
     buffer::Buffer,
-    world::{Tick, World},
+    world::{GetTicker, GetWorld, OnDirection, Tick},
 };
-use smart_leds::RGB8;
 
 pub mod empty;
 pub mod fire;
@@ -24,7 +23,7 @@ pub mod voronoi;
 #[allow(clippy::large_enum_variant)]
 pub enum WorldEnum<const C: usize, const L: usize, const N: usize> {
     Empty(Empty),
-    Fire(Fire<C, L>),
+    Fire(Fire<C, L, N>),
     NorthernLight(NorthernLight<C, L, N>),
     Matrix(Matrix<C, L, N>),
     Voronoi(Voronoi<C, L, N>),
@@ -32,23 +31,52 @@ pub enum WorldEnum<const C: usize, const L: usize, const N: usize> {
     Solid(Solid<C, L, N>),
 }
 
-impl<const C: usize, const L: usize, const N: usize> WorldEnum<C, L, N> {
-    pub fn as_tick<B: Buffer<RGB8, Point>>(
-        &mut self,
-    ) -> &mut dyn Tick<RGB8, Point, B, Ticker = Ticker> {
+impl<const C: usize, const L: usize, const N: usize> GetTicker for WorldEnum<C, L, N> {
+    fn get_ticker(&mut self) -> &mut Ticker {
         match self {
-            Self::Empty(w) => w,
-            Self::Fire(w) => w,
-            Self::NorthernLight(w) => w,
-            Self::Matrix(w) => w,
-            Self::Voronoi(w) => w,
-            Self::StarryNight(w) => w,
-            Self::Solid(w) => w,
+            Self::Empty(w) => w.get_ticker(),
+            Self::Fire(w) => w.get_ticker(),
+            Self::NorthernLight(w) => w.get_ticker(),
+            Self::Matrix(w) => w.get_ticker(),
+            Self::Voronoi(w) => w.get_ticker(),
+            Self::StarryNight(w) => w.get_ticker(),
+            Self::Solid(w) => w.get_ticker(),
         }
     }
 }
 
-impl<const C: usize, const L: usize, const N: usize> World for WorldEnum<C, L, N> {
+impl<B, const C: usize, const L: usize, const N: usize> Tick<Point, B, N> for WorldEnum<C, L, N>
+where
+    B: Buffer<Point, N>,
+{
+    fn tick(&mut self, buffer: &mut B) {
+        match self {
+            Self::Empty(w) => w.tick(buffer),
+            Self::Fire(w) => w.tick(buffer),
+            Self::NorthernLight(w) => w.tick(buffer),
+            Self::Matrix(w) => w.tick(buffer),
+            Self::Voronoi(w) => w.tick(buffer),
+            Self::StarryNight(w) => w.tick(buffer),
+            Self::Solid(w) => w.tick(buffer),
+        }
+    }
+}
+
+impl<const C: usize, const L: usize, const N: usize> OnDirection for WorldEnum<C, L, N> {
+    fn on_direction(&mut self, direction: ledlab::utils::Direction) {
+        match self {
+            Self::Empty(w) => w.on_direction(direction),
+            Self::Fire(w) => w.on_direction(direction),
+            Self::NorthernLight(w) => w.on_direction(direction),
+            Self::Matrix(w) => w.on_direction(direction),
+            Self::Voronoi(w) => w.on_direction(direction),
+            Self::StarryNight(w) => w.on_direction(direction),
+            Self::Solid(w) => w.on_direction(direction),
+        }
+    }
+}
+
+impl<const C: usize, const L: usize, const N: usize> GetWorld for WorldEnum<C, L, N> {
     fn get_world(index: usize) -> WorldEnum<C, L, N> {
         match index {
             0 => WorldEnum::Empty(Empty::new()),

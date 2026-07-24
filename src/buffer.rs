@@ -32,7 +32,7 @@ impl<const L: usize, const N: usize> RGB8Buffer<L, N> {
     }
 }
 
-impl<const L: usize, const N: usize> Buffer<RGB8, Point> for RGB8Buffer<L, N> {
+impl<const L: usize, const N: usize> Buffer<Point, N> for RGB8Buffer<L, N> {
     fn write(&mut self, coord: Point, color: RGB8) {
         let index = self.index(coord.x, coord.y);
         self.data[index] = color;
@@ -53,5 +53,9 @@ impl<const L: usize, const N: usize> Buffer<RGB8, Point> for RGB8Buffer<L, N> {
     fn read(&self, coord: Point) -> RGB8 {
         let index = self.index(coord.x, coord.y);
         self.data[index]
+    }
+
+    fn data(&self) -> [RGB8; N] {
+        self.data
     }
 }

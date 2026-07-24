@@ -9,8 +9,8 @@ use ledlab::buffer::Buffer;
 use ledlab::color::ColorGradient;
 use ledlab::perlin;
 use ledlab::utils::Direction;
+use ledlab::world::{GetTicker, OnDirection};
 use rand::Rng;
-use smart_leds::RGB8;
 use smart_leds::hsv::Hsv;
 
 const HEIGHT_COOLDOWN: u8 = 1;
@@ -21,7 +21,7 @@ const COLORS: usize = 4;
 const MAX_SPARKS: usize = 2;
 const SPAWN_COOLDOWN: usize = 60;
 
-pub struct Fire<const C: usize, const L: usize> {
+pub struct Fire<const C: usize, const L: usize, const N: usize> {
     noise: perlin::PerlinNoise,
     colormap: ColorGradient<COLORS>,
     height: CooldownValue<HEIGHT_COOLDOWN, HEIGHT_MIN, HEIGHT_MAX>,
@@ -31,10 +31,10 @@ pub struct Fire<const C: usize, const L: usize> {
     t: usize,
 }
 
-impl<const C: usize, const L: usize> Fire<C, L> {
+impl<const C: usize, const L: usize, const N: usize> Fire<C, L, N> {
     pub fn new() -> Self {
         let noise = perlin::PerlinNoise::new();
-        let colormap = Fire::<C, L>::get_colormap();
+        let colormap = Fire::<C, L, N>::get_colormap();
         let height = CooldownValue::new(HEIGHT_INIT);
         let ticker = Ticker::every(Duration::from_millis(35));
         let sparks: Vec<Spark, MAX_SPARKS> = Vec::new();
@@ -52,18 +52,16 @@ impl<const C: usize, const L: usize> Fire<C, L> {
     }
 }
 
-impl<const C: usize, const L: usize> Default for Fire<C, L> {
+impl<const C: usize, const L: usize, const N: usize> Default for Fire<C, L, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<B, const C: usize, const L: usize> Tick<RGB8, Point, B> for Fire<C, L>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<Point, B, N> for Fire<C, L, N>
 where
-    B: Buffer<RGB8, Point>,
+    B: Buffer<Point, N>,
 {
-    type Ticker = Ticker;
-
     fn tick(&mut self, buffer: &mut B) {
         buffer.clear();
 
@@ -96,12 +94,15 @@ where
         self.t = self.t.wrapping_add(1);
         // self.ticker.next().await;
     }
+}
 
-    fn ticker(&mut self) -> &mut Self::Ticker {
+impl<const C: usize, const L: usize, const N: usize> GetTicker for Fire<C, L, N> {
+    fn get_ticker(&mut self) -> &mut Ticker {
         &mut self.ticker
     }
+}
 
-    // impl<const C: usize, const L: usize> OnDirection for Fire<C, L> {
+impl<const C: usize, const L: usize, const N: usize> OnDirection for Fire<C, L, N> {
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => {
@@ -116,7 +117,7 @@ where
     }
 }
 
-impl<const C: usize, const L: usize> Fire<C, L> {
+impl<const C: usize, const L: usize, const N: usize> Fire<C, L, N> {
     fn spawn_spark(&mut self, x: usize, height: usize) {
         self.spawn_counter += 1;
         if height < (C - 1)
@@ -139,7 +140,7 @@ impl<const C: usize, const L: usize> Fire<C, L> {
             .retain(|spark| (spark.x >= 0) && (spark.x < C as isize) && (spark.y >= 0));
     }
 
-    fn draw_sparks<B: Buffer<RGB8, Point>>(&mut self, buffer: &mut B) {
+    fn draw_sparks<B: Buffer<Point, N>>(&mut self, buffer: &mut B) {
         let mut rng = RoscRng;
         let temp = rng.random_range(0.8f32..=1.0);
 

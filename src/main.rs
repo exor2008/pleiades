@@ -15,14 +15,14 @@ use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Ticker};
 use ledlab::apds9960::Apds9960;
 use ledlab::utils::Command;
-use ledlab::world::{Switch, World};
+use ledlab::world::{GetTicker, GetWorld, OnDirection, Switch, Tick};
 use pleiades::buffer::RGB8Buffer;
 use pleiades::world::WorldEnum;
 
-#[cfg(feature = "panic-probe")]
+// #[cfg(feature = "panic-probe")]
 use panic_probe as _;
-#[cfg(feature = "panic-reset")]
-use panic_reset as _;
+// #[cfg(feature = "panic-reset")]
+// use panic_reset as _;
 
 const WORLDS: usize = 6;
 const NUM_LEDS_LINE: usize = 16;
@@ -68,31 +68,33 @@ async fn main(spawner: Spawner) {
     let mut switch: Switch<WORLDS> = Switch::new();
 
     // Create a new world
-    let mut w = WorldEnum::get_world(1);
-    let mut world = w.as_tick();
+    let mut w = WorldEnum::<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>::get_world(1);
+    // let mut world = w.as_tick();
 
     loop {
         // Handle the command from the gesture sensor
         if let Ok(command) = CHANNEL.try_receive() {
             // defmt::info!("Command!: {}", command);
             match command {
-                Command::Level(direction) => world.on_direction(direction),
+                Command::Level(direction) => {
+                    w.on_direction(direction);
+                }
                 Command::Swing => {
-                    w = switch
-                        .switch_world::<WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>>();
-                    world = w.as_tick();
+                    w = switch.switch_world();
+                    // world = w.as_tick();
                 }
                 Command::SwitchPower => {
-                    w = switch
-                        .switch_power::<WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>>();
-                    world = w.as_tick();
+                    w = switch.switch_power();
+                    // world = w.as_tick();
                 }
             }
         }
 
-        world.tick(&mut buffer);
+        // world.tick(&mut buffer);
+        w.tick(&mut buffer);
         ws2812.write(&buffer.data).await;
-        world.ticker().next().await;
+        // world.ticker().next().await;
+        w.get_ticker().next().await;
     }
 }
 

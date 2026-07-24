@@ -9,16 +9,18 @@ use ledlab::{
     color::{Color, ColorGradient},
     perlin,
     utils::Direction,
+    world::{GetTicker, OnDirection},
 };
 use smart_leds::RGB8;
 
 const SPARKS_COOLDOWN: u8 = 3;
 const SPARKS_MIN_CHANCE: usize = 2;
 const SPARKS_MAX_CHANCE: usize = 5;
+const MAX_LETTERS: usize = 512;
 
 pub struct Matrix<const C: usize, const L: usize, const N: usize> {
     colormap: ColorGradient<C>,
-    letters: Vec<Letters, N>,
+    letters: Vec<Letters, MAX_LETTERS>,
     ticker: Ticker,
     rnd_col: Vec<usize, C>,
     spawn_chance: CooldownValue<SPARKS_COOLDOWN, SPARKS_MIN_CHANCE, SPARKS_MAX_CHANCE>,
@@ -30,7 +32,7 @@ impl<const C: usize, const L: usize, const N: usize> Matrix<C, L, N> {
         let ticker = Ticker::every(Duration::from_millis(30));
         let mut colormap = ColorGradient::new();
         let spawn_chance = CooldownValue::new(2);
-        let letters: Vec<Letters, N> = Vec::new();
+        let letters: Vec<Letters, MAX_LETTERS> = Vec::new();
         let rnd_col: Vec<usize, C> = Vec::new();
 
         colormap.add_color(Color::new(0.0, RGB8::new(0, 0, 0)));
@@ -54,12 +56,10 @@ impl<const C: usize, const L: usize, const N: usize> Default for Matrix<C, L, N>
     }
 }
 
-impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B> for Matrix<C, L, N>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<Point, B, N> for Matrix<C, L, N>
 where
-    B: Buffer<RGB8, Point>,
+    B: Buffer<Point, N>,
 {
-    type Ticker = Ticker;
-
     fn tick(&mut self, buffer: &mut B) {
         buffer.clear();
 
@@ -80,11 +80,15 @@ where
 
         self.t = self.t.wrapping_add(1);
     }
+}
 
-    fn ticker(&mut self) -> &mut Self::Ticker {
+impl<const C: usize, const L: usize, const N: usize> GetTicker for Matrix<C, L, N> {
+    fn get_ticker(&mut self) -> &mut Ticker {
         &mut self.ticker
     }
+}
 
+impl<const C: usize, const L: usize, const N: usize> OnDirection for Matrix<C, L, N> {
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => self.spawn_chance.up(),
@@ -131,7 +135,7 @@ impl<const C: usize, const L: usize, const N: usize> Matrix<C, L, N> {
             }
         });
 
-        if { N * 2 } - self.letters.len() >= tmp_letters.len() {
+        if MAX_LETTERS - self.letters.len() >= tmp_letters.len() {
             self.letters.extend(tmp_letters);
         } else {
             defmt::error!(

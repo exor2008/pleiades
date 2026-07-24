@@ -8,6 +8,7 @@ use ledlab::buffer::Buffer;
 use ledlab::color::{Color, ColorGradient};
 use ledlab::perlin;
 use ledlab::utils::Direction;
+use ledlab::world::{GetTicker, OnDirection};
 use perlin::rand_float;
 use smart_leds::RGB8;
 
@@ -49,13 +50,10 @@ impl<const C: usize, const L: usize, const N: usize> Default for NorthernLight<C
     }
 }
 
-impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Point, B>
-    for NorthernLight<C, L, N>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<Point, B, N> for NorthernLight<C, L, N>
 where
-    B: Buffer<RGB8, Point>,
+    B: Buffer<Point, N>,
 {
-    type Ticker = Ticker;
-
     fn tick(&mut self, buffer: &mut B) {
         buffer.clear();
 
@@ -73,11 +71,15 @@ where
 
         self.t = self.t.wrapping_add(1);
     }
+}
 
-    fn ticker(&mut self) -> &mut Self::Ticker {
+impl<const C: usize, const L: usize, const N: usize> GetTicker for NorthernLight<C, L, N> {
+    fn get_ticker(&mut self) -> &mut Ticker {
         &mut self.ticker
     }
+}
 
+impl<const C: usize, const L: usize, const N: usize> OnDirection for NorthernLight<C, L, N> {
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => {

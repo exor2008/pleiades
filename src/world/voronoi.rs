@@ -8,6 +8,7 @@ use ledlab::buffer::Buffer;
 use ledlab::color::{Color, ColorGradient};
 use ledlab::perlin;
 use ledlab::utils::Direction;
+use ledlab::world::{GetTicker, OnDirection};
 use micromath::F32Ext;
 use smart_leds::RGB8;
 
@@ -51,12 +52,10 @@ impl<const C: usize, const L: usize, const N: usize> Default for Voronoi<C, L, N
     }
 }
 
-impl<B, const C: usize, const L: usize, const N: usize> Tick<RGB8, Bpoint, B> for Voronoi<C, L, N>
+impl<B, const C: usize, const L: usize, const N: usize> Tick<Bpoint, B, N> for Voronoi<C, L, N>
 where
-    B: Buffer<RGB8, Bpoint>,
+    B: Buffer<Bpoint, N>,
 {
-    type Ticker = Ticker;
-
     fn tick(&mut self, buffer: &mut B) {
         buffer.clear();
 
@@ -83,7 +82,15 @@ where
         self.t += 1;
         self.t = if self.t > 10 { 0 } else { self.t };
     }
+}
 
+impl<const C: usize, const L: usize, const N: usize> GetTicker for Voronoi<C, L, N> {
+    fn get_ticker(&mut self) -> &mut Ticker {
+        &mut self.ticker
+    }
+}
+
+impl<const C: usize, const L: usize, const N: usize> OnDirection for Voronoi<C, L, N> {
     fn on_direction(&mut self, direction: Direction) {
         match direction {
             Direction::Up => {
@@ -93,10 +100,6 @@ where
                 self.model.desired_points_count.down();
             }
         }
-    }
-
-    fn ticker(&mut self) -> &mut Self::Ticker {
-        &mut self.ticker
     }
 }
 
