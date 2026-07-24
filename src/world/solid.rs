@@ -1,10 +1,10 @@
 use crate::buffer::Point;
 use crate::world::Tick;
-use crate::world::utils::CooldownValue;
 use embassy_time::{Duration, Ticker};
 use ledlab::buffer::Buffer;
 use ledlab::color::Color;
 use ledlab::color::ColorGradient;
+use ledlab::cooldown::CooldownValue;
 use ledlab::perlin;
 use ledlab::utils::Direction;
 use ledlab::world::GetTicker;

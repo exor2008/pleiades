@@ -1,9 +1,9 @@
 use crate::buffer::Point;
 use crate::world::Tick;
-use crate::world::utils::CooldownValue;
 use core::marker::PhantomData;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
+use ledlab::cooldown::CooldownValue;
 use ledlab::{
     buffer::Buffer,
     color::{Color, ColorGradient},

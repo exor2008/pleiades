@@ -17,7 +17,6 @@ pub mod matrix;
 pub mod northern_light;
 pub mod solid;
 pub mod starry_night;
-pub mod utils;
 pub mod voronoi;
 
 #[allow(clippy::large_enum_variant)]

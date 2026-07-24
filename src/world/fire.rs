@@ -1,12 +1,12 @@
 use crate::buffer::Point;
 use crate::world::Tick;
-use crate::world::utils::CooldownValue;
 use core::cmp::max;
 use embassy_rp::clocks::RoscRng;
 use embassy_time::{Duration, Ticker};
 use heapless::Vec;
 use ledlab::buffer::Buffer;
 use ledlab::color::ColorGradient;
+use ledlab::cooldown::CooldownValue;
 use ledlab::perlin;
 use ledlab::utils::Direction;
 use ledlab::world::{GetTicker, OnDirection};
