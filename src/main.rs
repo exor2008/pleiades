@@ -15,8 +15,9 @@ use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Ticker};
 use ledlab::apds9960::Apds9960;
 use ledlab::utils::Command;
-use ledlab::world::{GetTicker, GetWorld, OnDirection, Switch, Tick};
-use pleiades::buffer::RGB8Buffer;
+use ledlab::world::{OnDirection, Switch};
+use ledlab::{CommandHandler, start};
+use pleiades::buffer::{Point, RGB8Buffer};
 use pleiades::world::WorldEnum;
 
 // #[cfg(feature = "panic-probe")]
@@ -67,35 +68,8 @@ async fn main(spawner: Spawner) {
     // Switcher to switch between the worlds
     let mut switch: Switch<WORLDS> = Switch::new();
 
-    // Create a new world
-    let mut w = WorldEnum::<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>::get_world(1);
-    // let mut world = w.as_tick();
-
-    loop {
-        // Handle the command from the gesture sensor
-        if let Ok(command) = CHANNEL.try_receive() {
-            // defmt::info!("Command!: {}", command);
-            match command {
-                Command::Level(direction) => {
-                    w.on_direction(direction);
-                }
-                Command::Swing => {
-                    w = switch.switch_world();
-                    // world = w.as_tick();
-                }
-                Command::SwitchPower => {
-                    w = switch.switch_power();
-                    // world = w.as_tick();
-                }
-            }
-        }
-
-        // world.tick(&mut buffer);
-        w.tick(&mut buffer);
-        ws2812.write(&buffer.data).await;
-        // world.ticker().next().await;
-        w.get_ticker().next().await;
-    }
+    // Run main loop
+    start(&mut buffer, &mut switch, &mut ws2812, Handler {}).await;
 }
 
 #[embassy_executor::task]
@@ -116,5 +90,41 @@ async fn sensor_task(mut apds: Apds9960<'static, I2C0, Async>) -> ! {
             defmt::error!("Command channel buffer is full");
         }
         ticker.next().await;
+    }
+}
+
+struct Handler;
+
+impl
+    CommandHandler<
+        WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>,
+        Point,
+        RGB8Buffer<NUM_LEDS_LINE, NUM_LEDS>,
+        NUM_LEDS,
+        WORLDS,
+    > for Handler
+{
+    fn handle(
+        &self,
+        _buffer: &mut RGB8Buffer<NUM_LEDS_LINE, NUM_LEDS>,
+        world: &mut WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>,
+        switch: &mut Switch<WORLDS>,
+    ) {
+        if let Ok(command) = CHANNEL.try_receive() {
+            // defmt::info!("Command!: {}", command);
+            match command {
+                Command::Level(direction) => {
+                    world.on_direction(direction);
+                }
+                Command::Swing => {
+                    *world = switch
+                        .switch_world::<WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>>();
+                }
+                Command::SwitchPower => {
+                    *world = switch
+                        .switch_power::<WorldEnum<NUM_LEDS_COLUMN, NUM_LEDS_LINE, NUM_LEDS>>();
+                }
+            }
+        }
     }
 }
